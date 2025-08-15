@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DO117 Scrum Tool – Assignments</title>
+  <!-- Font Awesome for icons (optional) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Dark themed palette and layout for assignments dashboard */
+    :root {
+      --bg-dark: #0b0f16;
+      --bg-panel: #121826;
+      --bg-card: #0b1220;
+      --border-color: #1f2937;
+      --text-primary: #e5e7eb;
+      --text-secondary: #9aa6b2;
+      --text-tertiary: #cbd5e1;
+      --accent: #60a5fa;
+      --danger: #dc2626;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background-color: var(--bg-panel);
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+    .container {
+      display: flex;
+      height: calc(100vh - 70px);
+    }
+    aside {
+      width: 23%;
+      min-width: 220px;
+      padding: 1rem;
+      background-color: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    aside h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+    }
+    main {
+      flex: 1;
+      padding: 1rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+    #filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    #filters select,
+    #filters input {
+      background-color: var(--bg-panel);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    #peopleContainer {
+      flex: 1;
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+    .person-column {
+      flex: 1;
+      min-width: 250px;
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+    .person-column h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+    .task-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      cursor: grab;
+    }
+    .task-card.dragging {
+      opacity: 0.5;
+    }
+    .task-card .title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--text-primary);
+    }
+    .task-card .meta {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.15rem;
+    }
+    .task-card .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.3rem;
+    }
+    .task-card .actions button {
+      border: none;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      cursor: pointer;
+      color: var(--bg-dark);
+    }
+    .task-card .actions button.edit { background-color: var(--warning); }
+    .task-card .actions button.unassign { background-color: #6b7280; color: var(--bg-dark); }
+    .task-card .actions button.complete { background-color: var(--success); }
+    .task-card .actions button.delete { background-color: var(--danger); }
+    .task-card .actions button.assign { background-color: var(--accent); }
+    .hidden { display: none !important; }
+    /* Scrollbar styling for horizontal column container */
+    #peopleContainer::-webkit-scrollbar {
+      height: 6px;
+    }
+    #peopleContainer::-webkit-scrollbar-thumb {
+      background-color: #374151;
+      border-radius: 3px;
+    }
+    #peopleContainer::-webkit-scrollbar-track {
+      background-color: #1f2937;
+    }
+
+    /* Styling for due date overview list */
+    #dueDateOverview {
+      margin-top: 0.5rem;
+      max-height: 40vh;
+      overflow-y: auto;
+      font-size: 0.75rem;
+    }
+    #dueDateOverview ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+    #dueDateOverview li {
+      margin-bottom: 0.3rem;
+      padding: 0.3rem;
+      border-radius: 4px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+    }
+    #dueDateOverview li .task-title {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    #dueDateOverview li .task-info {
+      color: var(--text-secondary);
+    }
+    /* Color modifiers for due soon and past due */
+    #dueDateOverview li.due-soon {
+      background-color: rgba(245, 158, 11, 0.2);
+      border-color: var(--warning);
+    }
+    #dueDateOverview li.due-past {
+      background-color: rgba(220, 38, 38, 0.2);
+      border-color: var(--danger);
+    }
+
+    /* Site overview styles */
+    /* Site overview grid */
+    #siteOverview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+    .site-card {
+      flex: 0 0 calc(33% - 0.75rem);
+      min-width: 250px;
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      box-sizing: border-box;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      transition: background-color 0.2s;
+    }
+    .site-card:hover {
+      background-color: var(--bg-card);
+    }
+    .site-card h4 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+    .site-card .site-info {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: var(--success);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* Modal overlay for editing dates and status */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+    .modal.hidden {
+      display: none;
+    }
+    .modal-content {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1rem;
+      width: 320px;
+      box-sizing: border-box;
+      color: var(--text-primary);
+    }
+    .modal-content h3 {
+      margin-top: 0;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .modal-content label {
+      display: block;
+      margin-bottom: 0.6rem;
+      font-size: 0.8rem;
+    }
+    .modal-content input,
+    .modal-content select {
+      width: 100%;
+      padding: 0.3rem;
+      margin-top: 0.2rem;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+    }
+    .modal-content .modal-actions {
+      text-align: right;
+      margin-top: 0.75rem;
+    }
+    .modal-content .modal-actions button {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    #modalSave {
+      background-color: var(--accent);
+      color: var(--bg-dark);
+      margin-left: 0.5rem;
+    }
+    #modalCancel {
+      background-color: #6b7280;
+      color: var(--bg-dark);
+    }
+
+    /* People overview grid */
+    #peopleOverview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+    .person-card {
+      flex: 0 0 calc(33% - 0.75rem);
+      min-width: 250px;
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      box-sizing: border-box;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      transition: background-color 0.2s;
+    }
+    .person-card:hover {
+      background-color: var(--bg-card);
+    }
+    .person-card h4 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+    .person-card .person-info {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+    /* Styles for header navigation and actions */
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .nav-btn, .upload-label {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .nav-btn:hover, .upload-label:hover {
+      background-color: var(--accent);
+      color: var(--bg-dark);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- Header with navigation and actions -->
+    <div class="header-row">
+      <div class="header-left">
+        <!-- Home button navigates back to the root index page -->
+        <button id="homeButton" class="nav-btn">Home</button>
+        <!-- Logo and title -->
+        <img src="bowhead.png" alt="Bowhead logo" style="height:40px; width:auto; object-fit:contain;" />
+        <h1 style="margin:0;">DO117 Scrum Tool</h1>
+      </div>
+      <div class="header-right">
+        <!-- Save changes locally (persists to localStorage) -->
+        <button id="saveLocalBtn" class="nav-btn">Save</button>
+        <!-- Export tasks to a JSON file -->
+        <button id="exportBtn" class="nav-btn">Export</button>
+        <!-- Import tasks from a JSON file -->
+        <label class="upload-label">Import
+          <input type="file" id="importFile" style="display:none;">
+        </label>
+        <!-- Load tasks from GitHub -->
+        <button id="loadGithubBtn" class="nav-btn">Load GitHub</button>
+        <!-- Save tasks to GitHub -->
+        <button id="saveGithubBtn" class="nav-btn">Save GitHub</button>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <aside>
+      <h2>Assignment Overview</h2>
+      <canvas id="assignmentChart" width="300" height="300"></canvas>
+      <!-- Due date overview will list all tasks with due dates and highlight those approaching or past due -->
+      <h2 style="margin-top:1.5rem;">Due Date Overview</h2>
+      <div id="dueDateOverview"></div>
+    </aside>
+    <main>
+      <div id="filters">
+        <input type="text" id="search" placeholder="Search tasks..." />
+        <select id="filterSite"></select>
+        <select id="filterCategory"></select>
+      </div>
+      <!-- Overview containers: site and people summaries -->
+      <div id="siteOverview"></div>
+      <div id="peopleOverview"></div>
+      <!-- Container for assignment columns (task board) -->
+      <div id="peopleContainer"></div>
+    </main>
+  </div>
+  <!-- Chart.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script>
+    // List of people to appear as columns (TEMPS removed as requested)
+    const people = ['Chase Cole','Weston Bragg','Brian Burrer','Gavin Lassater','Holocom'];
+    // Mapping of site codes to full names
+    const sites = {
+      SDNS: 'Naval Base San Diego',
+      SDNI: 'Naval Air Station North Island',
+      SDAS: 'Naval Base Point Loma Annex',
+      MRMZ: 'Marine Corps Air Station Miramar',
+      LEMR: 'Naval Air Station Lemoore',
+      PRTH: 'Naval Base Ventura County Port Hueneme'
+    };
+    // Task categories for each site
+    // Note: 'Install Planning' removed, 'Install' renamed to 'Install Lead'
+    const categories = [
+      'Site Survey',
+      'Planned/Existing Drawings',
+      'Planned/Existing TFR',
+      'Install Lead',
+      'As-Built Drawings',
+      'As-Built TFR'
+    ];
+    // Build tasks array dynamically from sites and categories
+    let tasks = [];
+    /*
+     * Build the initial list of tasks. Each site from the `sites` object
+     * is combined with each category from the `categories` array to
+     * generate a unique task. These tasks have default values for
+     * status, dueDate, projectedStart and assignee. This function runs
+     * once on page load and initializes the global `tasks` array.
+     */
+    {
+      let idCounter = 1;
+      Object.entries(sites).forEach(([code, name]) => {
+        categories.forEach(cat => {
+          tasks.push({
+            id: idCounter++,
+            title: `${code} — ${cat}`,
+            site: code,
+            siteName: name,
+            category: cat,
+            status: 'Not Started',
+            dueDate: '',
+            projectedStart: '',
+            assignee: ''
+          });
+        });
+      });
+    }
+
+    // ---------------------------------------------------------------------
+    // Persistence helpers
+    // Key used for localStorage persistence. Updating this key will break
+    // previously saved data.
+    const STORAGE_KEY = 'do117_tasks_persistent';
+    // ---------------------------------------------------------------------
+    // GitHub configuration for remote sync. The tasks will be saved to and loaded
+    // from the specified repository path. Users will be prompted for a personal
+    // access token on the first save. The token is stored in localStorage for
+    // subsequent saves. Modify OWNER, REPO or FILE_PATH as needed.
+    const GITHUB_OWNER = 'braggw22';
+    const GITHUB_REPO = 'do117-scrum-tool';
+    const GITHUB_FILE_PATH = 'scrum_tasks.json';
+    let githubToken = localStorage.getItem('githubToken') || '';
+
+    /**
+     * Load tasks from localStorage. If valid data exists, replace the
+     * generated tasks array with the saved data. Any errors during
+     * parsing are silently ignored.
+     */
+    function loadFromLocal() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            tasks = parsed;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load tasks from localStorage', err);
+      }
+    }
+
+    /**
+     * Save the current tasks array to localStorage. Errors are logged
+     * silently and do not interrupt user interactions.
+     */
+    function saveToLocal() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      } catch (err) {
+        console.error('Failed to save tasks to localStorage', err);
+      }
+    }
+
+    /**
+     * Trigger a download of the current tasks as a JSON file. The file
+     * will be named tasks.json and contain formatted JSON for easier
+     * readability.
+     */
+    function exportTasks() {
+      const dataStr = JSON.stringify(tasks, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tasks.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Load tasks from a user-selected JSON file. The file contents must
+     * represent an array of task objects matching the current data
+     * structure. After successful import, the tasks array is replaced,
+     * saved locally and the UI rerendered.
+     * @param {File} file A file selected via an <input type="file">
+     */
+    function importTasks(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed)) {
+            tasks = parsed;
+            saveToLocal();
+            render();
+          } else {
+            alert('Invalid tasks file: expected an array of tasks');
+          }
+        } catch (err) {
+          alert('Error reading tasks file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /**
+     * Base64 encode/unencode helpers for UTF-8 strings.
+     */
+    function b64Encode(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+    function b64Decode(str) {
+      return decodeURIComponent(escape(atob(str)));
+    }
+
+    /**
+     * Load tasks from GitHub. This fetches the JSON file from the repository
+     * and replaces the current tasks array if valid. It also persists the
+     * loaded tasks to localStorage and updates the UI. Returns a Promise that
+     * resolves to true on success or false on failure.
+     */
+    function loadFromGitHub() {
+      return fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+        headers: { Accept: 'application/vnd.github.raw' }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch tasks from GitHub: ' + res.status);
+          return res.text();
+        })
+        .then(text => {
+          try {
+            const data = JSON.parse(text);
+            if (Array.isArray(data)) {
+              tasks = data;
+              saveToLocal();
+              // Re-render UI after loading new tasks
+              render();
+              renderSiteOverview();
+              renderPeopleOverview();
+              updateChart();
+              updateDueOverview();
+              return true;
+            } else {
+              alert('Invalid tasks data loaded from GitHub');
+              return false;
+            }
+          } catch (e) {
+            alert('Failed to parse tasks from GitHub: ' + e.message);
+            return false;
+          }
+        })
+        .catch(err => {
+          alert(err.message);
+          return false;
+        });
+    }
+
+    /**
+     * Save tasks to GitHub. If a personal access token has not been provided,
+     * prompts the user for one. The token must have permission to push to the
+     * repository. The function writes the tasks JSON to the configured path
+     * on the main branch. It bases the update on the existing file SHA when
+     * present.
+     */
+    function saveToGitHub() {
+      if (!githubToken) {
+        const tokenInput = prompt('Enter GitHub Personal Access Token (with repo scope) to save tasks:');
+        if (!tokenInput) {
+          return; // user cancelled
+        }
+        githubToken = tokenInput.trim();
+        localStorage.setItem('githubToken', githubToken);
+      }
+      const contentEncoded = b64Encode(JSON.stringify(tasks, null, 2));
+      // Fetch file metadata to obtain SHA if the file already exists
+      return fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: 'application/vnd.github+json'
+        }
+      })
+        .then(res => (res.ok ? res.json() : {}))
+        .then(fileData => {
+          const body = {
+            message: 'Update DO117 tasks',
+            content: contentEncoded,
+            branch: 'main'
+          };
+          if (fileData && fileData.sha) {
+            body.sha = fileData.sha;
+          }
+          return fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: 'application/vnd.github+json'
+            },
+            body: JSON.stringify(body)
+          });
+        })
+        .then(res => {
+          if (res.ok) {
+            alert('Tasks saved to GitHub.');
+          } else {
+            return res.json().then(err => {
+              throw new Error(err.message || 'Failed to save tasks to GitHub');
+            });
+          }
+        })
+        .catch(err => {
+          alert(err.message);
+        });
+    }
+
+    // Immediately attempt to load any persisted data from localStorage. If
+    // valid data is found it will replace the generated tasks array.
+    loadFromLocal();
+    // If no tasks loaded from local storage (fresh page), attempt to load from GitHub
+    if (!tasks || tasks.length === 0) {
+      loadFromGitHub();
+    }
+    // Chart instance reference
+    let assignmentChart;
+
+    // Currently selected person filter. Empty string means show all.
+    let selectedPerson = '';
+    /**
+     * Populate filter dropdowns for site and category based on tasks.
+     */
+    function populateFilters() {
+      const siteSelect = document.getElementById('filterSite');
+      const categorySelect = document.getElementById('filterCategory');
+      // Populate site filter
+      siteSelect.innerHTML = '<option value="">All Sites</option>';
+      Object.keys(sites).forEach(code => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `${code} – ${sites[code]}`;
+        siteSelect.appendChild(opt);
+      });
+      // Populate category filter
+      categorySelect.innerHTML = '<option value="">All Categories</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        categorySelect.appendChild(opt);
+      });
+    }
+    /**
+     * Render people columns and tasks based on current filters and assignments.
+     */
+    function render() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const fs = document.getElementById('filterSite').value;
+      const fc = document.getElementById('filterCategory').value;
+      const container = document.getElementById('peopleContainer');
+      container.innerHTML = '';
+      // Filter tasks according to filters and search
+      const filtered = tasks.filter(t => {
+        return (
+          (!fs || t.site === fs) &&
+          (!fc || t.category === fc) &&
+          (!selectedPerson || t.assignee === selectedPerson) &&
+          (t.title.toLowerCase().includes(search) || t.siteName.toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+        );
+      });
+      // Group filtered tasks by assignee; treat unrecognized assignees as Unassigned
+      const groupMap = {};
+      // Initialize group for each person and unassigned
+      people.forEach(name => groupMap[name] = []);
+      groupMap['Unassigned'] = [];
+      filtered.forEach(t => {
+        const person = (people.includes(t.assignee)) ? t.assignee : 'Unassigned';
+        groupMap[person].push(t);
+      });
+      // Build columns for each person and unassigned
+      [...people, 'Unassigned'].forEach(person => {
+        const col = document.createElement('div');
+        col.className = 'person-column';
+        col.dataset.person = person;
+        // Display count of tasks in header
+        const count = groupMap[person].length;
+        col.innerHTML = `<h3>${person}${count > 0 ? ' (' + count + ')' : ''}</h3>`;
+        // Drag-over and drop handlers
+        col.addEventListener('dragover', ev => {
+          ev.preventDefault();
+        });
+        col.addEventListener('drop', ev => {
+          ev.preventDefault();
+          const id = parseInt(ev.dataTransfer.getData('text/plain'));
+          assignTask(id, person === 'Unassigned' ? '' : person);
+        });
+        // Append task cards
+        groupMap[person].forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'task-card';
+          card.draggable = true;
+          card.dataset.id = t.id;
+          // Build the base HTML for the card
+          let cardHtml = `
+            <div class="title">${t.title}</div>
+            <div class="meta">Site: ${t.siteName}</div>
+            <div class="meta">Category: ${t.category}</div>
+            <div class="meta">Status: ${t.status}</div>
+            <div class="meta">Due: ${t.dueDate || 'TBD'}</div>
+          `;
+          // Add projected start if applicable
+          if (t.category === 'Install Lead' || t.category === 'Site Survey') {
+            cardHtml += `<div class="meta">Start: ${t.projectedStart || 'TBD'}</div>`;
+          }
+          // Start building actions section
+          cardHtml += '<div class="actions">';
+          // Assignment select dropdown
+          cardHtml += '<select class="assign-select"><option value="">Assign…</option>';
+          people.forEach(name => {
+            cardHtml += `<option value="${name}"${t.assignee === name ? ' selected' : ''}>${name}</option>`;
+          });
+          cardHtml += '</select>';
+          // Unassign button
+          cardHtml += '<button class="unassign">Unassign</button>';
+          // Edit button
+          cardHtml += '<button class="edit">Edit</button>';
+          // Add start button for applicable tasks
+          if (t.category === 'Install Lead' || t.category === 'Site Survey') {
+            cardHtml += '<button class="start">Set Start</button>';
+          }
+          // Complete button when not already complete
+          if (t.status !== 'Complete') {
+            cardHtml += '<button class="complete">Complete</button>';
+          }
+          cardHtml += '</div>';
+          card.innerHTML = cardHtml;
+          // Drag events for drag-and-drop assignment
+          card.addEventListener('dragstart', ev => {
+            ev.dataTransfer.setData('text/plain', String(t.id));
+            ev.dataTransfer.effectAllowed = 'move';
+            card.classList.add('dragging');
+          });
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+          });
+          // Assignment dropdown handler
+          const assignSelect = card.querySelector('.assign-select');
+          assignSelect.addEventListener('change', () => {
+            const value = assignSelect.value;
+            assignTask(t.id, value);
+          });
+          // Unassign button handler
+          const unassignBtn = card.querySelector('.unassign');
+          unassignBtn.addEventListener('click', () => assignTask(t.id, ''));
+          // Edit button handler (status and due date)
+          const editBtn = card.querySelector('.edit');
+          editBtn.addEventListener('click', () => editTask(t.id));
+          // Start button handler for setting projected start
+          const startBtn = card.querySelector('.start');
+          if (startBtn) {
+            startBtn.addEventListener('click', () => setProjectedStart(t.id));
+          }
+          // Complete button handler
+          const completeBtn = card.querySelector('.complete');
+          if (completeBtn) completeBtn.addEventListener('click', () => completeTask(t.id));
+          col.appendChild(card);
+        });
+        container.appendChild(col);
+      });
+      updateChart();
+      updateDueOverview();
+      // Always render site and people overviews
+      renderSiteOverview();
+      renderPeopleOverview();
+    }
+    /**
+     * Assign a task to a person or unassign it.
+     * @param {number} id The task id
+     * @param {string} person The person's name or '' for unassigned
+     */
+    function assignTask(id, person) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.assignee = person;
+        // Persist changes immediately when assignment changes
+        saveToLocal();
+        render();
+      }
+    }
+    /**
+     * Edit task properties: status and due date.
+     * @param {number} id The task id
+     */
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      openModal(task, 'edit');
+    }
+    /**
+     * Mark a task as complete.
+     * @param {number} id The task id
+     */
+    function completeTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.status = 'Complete';
+        // Persist completed status
+        saveToLocal();
+        render();
+      }
+    }
+
+    /**
+     * Set projected start date for tasks (only used for Install Lead and Site Survey categories).
+     * @param {number} id The task id
+     */
+    function setProjectedStart(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      openModal(task, 'start');
+    }
+
+    /**
+     * Open the modal for editing dates and status or projected start.
+     * @param {Object} task The task object
+     * @param {string} mode 'edit' to modify status and due date, 'start' to set start date
+     */
+    let modalTaskId = null;
+    let modalMode = '';
+    function openModal(task, mode) {
+      modalTaskId = task.id;
+      modalMode = mode;
+      const modal = document.getElementById('dateModal');
+      const title = document.getElementById('modalTitle');
+      const statusLabel = document.getElementById('statusLabel');
+      const dueLabel = document.getElementById('dueDateLabel');
+      const startLabel = document.getElementById('startDateLabel');
+      const statusSelect = document.getElementById('modalStatus');
+      const dueInput = document.getElementById('modalDueDate');
+      const startInput = document.getElementById('modalStartDate');
+      if (mode === 'edit') {
+        title.textContent = 'Edit Task';
+        statusLabel.style.display = '';
+        dueLabel.style.display = '';
+        startLabel.style.display = 'none';
+        statusSelect.value = task.status;
+        dueInput.value = task.dueDate || '';
+      } else if (mode === 'start') {
+        title.textContent = 'Set Projected Start Date';
+        statusLabel.style.display = 'none';
+        dueLabel.style.display = 'none';
+        startLabel.style.display = '';
+        startInput.value = task.projectedStart || '';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    /**
+     * Close the modal and clear state
+     */
+    function closeModal() {
+      const modal = document.getElementById('dateModal');
+      modal.classList.add('hidden');
+      modalTaskId = null;
+      modalMode = '';
+    }
+    /**
+     * Update the assignment overview chart showing task counts per person
+     * and highlighting those with tasks due soon (within 3 days).
+     */
+    function updateChart() {
+      // Compute counts per person (including Unassigned)
+      const labels = [...people, 'Unassigned'];
+      const counts = {};
+      const dueSoon = {};
+      labels.forEach(name => { counts[name] = 0; dueSoon[name] = false; });
+      const now = new Date();
+      const threshold = new Date(now.getTime());
+      threshold.setDate(threshold.getDate() + 30);
+      tasks.forEach(t => {
+        // Check if task matches current filter or not; the chart should reflect only filtered tasks
+        const search = document.getElementById('search').value.toLowerCase();
+        const fs = document.getElementById('filterSite').value;
+        const fc = document.getElementById('filterCategory').value;
+        const matches = (
+          (!fs || t.site === fs) &&
+          (!fc || t.category === fc) &&
+          (t.title.toLowerCase().includes(search) || t.siteName.toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+        );
+        if (!matches) return;
+        const key = people.includes(t.assignee) ? t.assignee : 'Unassigned';
+        counts[key]++;
+        if (t.status !== 'Complete' && t.dueDate) {
+          const due = new Date(t.dueDate);
+          if (!isNaN(due.getTime()) && due <= threshold) {
+            dueSoon[key] = true;
+          }
+        }
+      });
+      const data = {
+        labels: labels,
+        datasets: [{
+          label: 'Tasks',
+          data: labels.map(name => counts[name]),
+          backgroundColor: labels.map(name => dueSoon[name] ? 'rgba(220,38,38,0.7)' : 'rgba(96,165,250,0.7)'),
+          borderColor: labels.map(name => dueSoon[name] ? 'rgba(220,38,38,1)' : 'rgba(96,165,250,1)'),
+          borderWidth: 1
+        }]
+      };
+      if (assignmentChart) {
+        assignmentChart.data.labels = data.labels;
+        assignmentChart.data.datasets[0].data = data.datasets[0].data;
+        assignmentChart.data.datasets[0].backgroundColor = data.datasets[0].backgroundColor;
+        assignmentChart.data.datasets[0].borderColor = data.datasets[0].borderColor;
+        assignmentChart.update();
+      } else {
+        const ctx = document.getElementById('assignmentChart').getContext('2d');
+        assignmentChart = new Chart(ctx, {
+          type: 'bar',
+          data: data,
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: { display: false }
+            },
+            scales: {
+              x: { title: { display: false }, ticks: { color: '#cbd5e1' } },
+              y: { beginAtZero: true, precision: 0, ticks: { color: '#cbd5e1' } }
+            }
+          }
+        });
+      }
+    }
+
+    /**
+     * Update the due date overview. Lists all tasks with a due date,
+     * sorted by date, and applies highlighting when they are due soon
+     * (within 30 days) or past due. Only tasks matching current filters
+     * and search criteria are included.
+     */
+    function updateDueOverview() {
+      const container = document.getElementById('dueDateOverview');
+      if (!container) return;
+      // Clear current list
+      container.innerHTML = '';
+      // Gather filter values
+      const search = document.getElementById('search').value.toLowerCase();
+      const fs = document.getElementById('filterSite').value;
+      const fc = document.getElementById('filterCategory').value;
+      const now = new Date();
+      const soonThreshold = new Date(now.getTime());
+      soonThreshold.setDate(soonThreshold.getDate() + 30);
+      // Filter tasks: must have a due date
+      const dueTasks = tasks.filter(t => {
+        // Apply same filtering as for rendering
+        const matches = (
+          (!fs || t.site === fs) &&
+          (!fc || t.category === fc) &&
+          (t.title.toLowerCase().includes(search) || t.siteName.toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+        );
+        return matches && t.dueDate;
+      });
+      // Sort by due date ascending
+      dueTasks.sort((a, b) => {
+        const da = new Date(a.dueDate);
+        const db = new Date(b.dueDate);
+        return da - db;
+      });
+      // Create list element
+      const ul = document.createElement('ul');
+      dueTasks.forEach(t => {
+        const li = document.createElement('li');
+        li.classList.add('due-item');
+        // Determine highlight class
+        if (t.status !== 'Complete') {
+          const due = new Date(t.dueDate);
+          if (!isNaN(due.getTime())) {
+            if (due < now) {
+              li.classList.add('due-past');
+            } else if (due <= soonThreshold) {
+              li.classList.add('due-soon');
+            }
+          }
+        }
+        li.innerHTML = `
+          <div class="task-title">${t.title}</div>
+          <div class="task-info">Due: ${t.dueDate}</div>
+          <div class="task-info">Status: ${t.status}</div>
+        `;
+        ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+    // Event listeners for filters and search
+    document.addEventListener('DOMContentLoaded', () => {
+      // Populate filters and perform initial render
+      populateFilters();
+      render();
+      // Attach filter handlers
+      document.getElementById('search').addEventListener('input', render);
+      document.getElementById('filterSite').addEventListener('change', render);
+      document.getElementById('filterCategory').addEventListener('change', render);
+      // Navigation and persistence controls
+      const homeBtn = document.getElementById('homeButton');
+      if (homeBtn) {
+        homeBtn.addEventListener('click', () => {
+          // Navigate to the root page; adjust path if file is served as index.html
+          window.location.href = 'index.html';
+        });
+      }
+      const saveBtn = document.getElementById('saveLocalBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          saveToLocal();
+          alert('Changes saved locally.');
+        });
+      }
+      const exportBtn = document.getElementById('exportBtn');
+      if (exportBtn) {
+        exportBtn.addEventListener('click', exportTasks);
+      }
+      const importInput = document.getElementById('importFile');
+      if (importInput) {
+        importInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            importTasks(file);
+            // Reset value so the same file can be re-imported if needed
+            e.target.value = '';
+          }
+        });
+      }
+      // GitHub sync buttons: load and save tasks via GitHub API
+      const loadGitBtn = document.getElementById('loadGithubBtn');
+      if (loadGitBtn) {
+        loadGitBtn.addEventListener('click', () => {
+          loadFromGitHub();
+        });
+      }
+      const saveGitBtn = document.getElementById('saveGithubBtn');
+      if (saveGitBtn) {
+        saveGitBtn.addEventListener('click', () => {
+          // Persist to localStorage before syncing to GitHub
+          saveToLocal();
+          saveToGitHub();
+        });
+      }
+    });
+
+    /**
+     * Toggle between assignments view and site overview view.
+     */
+    // Note: toggleView is unused; site and people overviews are always visible.
+
+    /**
+     * Render site overview cards summarizing progress for each site. Shows progress bar
+     * and counts of due soon and overdue tasks. Clicking a site card filters the board
+     * to that site.
+     */
+    function renderSiteOverview() {
+      const container = document.getElementById('siteOverview');
+      if (!container) return;
+      container.innerHTML = '';
+      // Gather filter and search values to apply to tasks
+      const search = document.getElementById('search').value.toLowerCase();
+      const fs = document.getElementById('filterSite').value;
+      const fc = document.getElementById('filterCategory').value;
+      const now = new Date();
+      const soonThreshold = new Date(now.getTime());
+      soonThreshold.setDate(soonThreshold.getDate() + 30);
+      Object.entries(sites).forEach(([code, name]) => {
+        // If a site filter is set and does not match, skip
+        if (fs && code !== fs) return;
+        // Collect tasks for this site matching search, category filter, and selected person
+        const siteTasks = tasks.filter(t => {
+          const matches = (
+            (!fc || t.category === fc) &&
+            (t.site === code) &&
+            (!selectedPerson || t.assignee === selectedPerson) &&
+            (t.title.toLowerCase().includes(search) || t.siteName.toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+          );
+          return matches;
+        });
+        if (siteTasks.length === 0) return;
+        const total = siteTasks.length;
+        const completed = siteTasks.filter(t => t.status === 'Complete').length;
+        // Determine due soon and overdue counts for incomplete tasks
+        let dueSoonCount = 0;
+        let overdueCount = 0;
+        siteTasks.forEach(t => {
+          if (t.status !== 'Complete' && t.dueDate) {
+            const due = new Date(t.dueDate);
+            if (!isNaN(due.getTime())) {
+              if (due < now) overdueCount++;
+              else if (due <= soonThreshold) dueSoonCount++;
+            }
+          }
+        });
+        // Compute completion ratio
+        const ratio = total === 0 ? 0 : completed / total;
+        // Create card element
+        const card = document.createElement('div');
+        card.className = 'site-card';
+        card.innerHTML = `
+          <h4>${name} (${code})</h4>
+          <div class="site-info">${completed}/${total} tasks complete</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${(ratio*100).toFixed(0)}%;"></div></div>
+          <div class="site-info">Due soon: ${dueSoonCount} | Overdue: ${overdueCount}</div>
+        `;
+        // Add click event to filter by site only
+        card.addEventListener('click', () => {
+          // Set site filter to this site
+          document.getElementById('filterSite').value = code;
+          // Clear person filter when navigating via site card
+          selectedPerson = '';
+          render();
+        });
+        container.appendChild(card);
+      });
+    }
+
+    /**
+     * Render people overview cards summarizing assignments for each person. Shows
+     * counts of total tasks, completed tasks, due soon and overdue tasks. Clicking
+     * a person card filters the board to that person.
+     */
+    function renderPeopleOverview() {
+      const container = document.getElementById('peopleOverview');
+      if (!container) return;
+      container.innerHTML = '';
+      // Gather filter and search values for tasks
+      const search = document.getElementById('search').value.toLowerCase();
+      const fs = document.getElementById('filterSite').value;
+      const fc = document.getElementById('filterCategory').value;
+      const now = new Date();
+      const soonThreshold = new Date(now.getTime());
+      soonThreshold.setDate(soonThreshold.getDate() + 30);
+      // For each person, compute counts based on tasks matching filters
+      people.forEach(name => {
+        const personTasks = tasks.filter(t => {
+          return (
+            (!fs || t.site === fs) &&
+            (!fc || t.category === fc) &&
+            (t.assignee === name) &&
+            (t.title.toLowerCase().includes(search) || t.siteName.toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+          );
+        });
+        const total = personTasks.length;
+        if (total === 0) {
+          // Even if no tasks, still show the person card with zero counts
+          const card = document.createElement('div');
+          card.className = 'person-card';
+          card.innerHTML = `
+            <h4>${name}</h4>
+            <div class="person-info">0/0 tasks complete</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;"></div></div>
+            <div class="person-info">Due soon: 0 | Overdue: 0</div>
+          `;
+          card.addEventListener('click', () => {
+            // Set selected person and re-render
+            if (selectedPerson === name) {
+              selectedPerson = '';
+            } else {
+              selectedPerson = name;
+            }
+            // Reset site filter when selecting person
+            document.getElementById('filterSite').value = '';
+            render();
+            // Scroll to board
+            document.getElementById('peopleContainer').scrollIntoView({ behavior: 'smooth' });
+          });
+          container.appendChild(card);
+          return;
+        }
+        const completed = personTasks.filter(t => t.status === 'Complete').length;
+        let dueSoonCount = 0;
+        let overdueCount = 0;
+        personTasks.forEach(t => {
+          if (t.status !== 'Complete' && t.dueDate) {
+            const due = new Date(t.dueDate);
+            if (!isNaN(due.getTime())) {
+              if (due < now) overdueCount++;
+              else if (due <= soonThreshold) dueSoonCount++;
+            }
+          }
+        });
+        const ratio = total === 0 ? 0 : completed / total;
+        const card = document.createElement('div');
+        card.className = 'person-card';
+        card.innerHTML = `
+          <h4>${name}</h4>
+          <div class="person-info">${completed}/${total} tasks complete</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${(ratio*100).toFixed(0)}%;"></div></div>
+          <div class="person-info">Due soon: ${dueSoonCount} | Overdue: ${overdueCount}</div>
+        `;
+        card.addEventListener('click', () => {
+          // Toggle person filter
+          if (selectedPerson === name) {
+            selectedPerson = '';
+          } else {
+            selectedPerson = name;
+          }
+          // Reset site filter when selecting person
+          document.getElementById('filterSite').value = '';
+          render();
+          // Scroll to board
+          document.getElementById('peopleContainer').scrollIntoView({ behavior: 'smooth' });
+        });
+        container.appendChild(card);
+      });
+    }
+
+    // Handle modal save and cancel
+    document.addEventListener('DOMContentLoaded', () => {
+      // Save button updates the appropriate fields based on modalMode
+      const saveBtn = document.getElementById('modalSave');
+      const cancelBtn = document.getElementById('modalCancel');
+      saveBtn.addEventListener('click', () => {
+        if (modalTaskId === null) return;
+        const task = tasks.find(t => t.id === modalTaskId);
+        if (!task) { closeModal(); return; }
+        if (modalMode === 'edit') {
+          const newStatus = document.getElementById('modalStatus').value;
+          const newDue = document.getElementById('modalDueDate').value;
+          task.status = newStatus;
+          task.dueDate = newDue;
+        } else if (modalMode === 'start') {
+          const newStart = document.getElementById('modalStartDate').value;
+          task.projectedStart = newStart;
+        }
+        // Persist after editing or setting start
+        saveToLocal();
+        closeModal();
+        render();
+      });
+      cancelBtn.addEventListener('click', () => {
+        closeModal();
+      });
+    });
+
+  </script>
+
+<!-- Modal for editing status and dates and setting start dates -->
+<div id="dateModal" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="modalTitle">Edit Task</h3>
+    <label id="statusLabel">Status:
+      <select id="modalStatus">
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Complete">Complete</option>
+      </select>
+    </label>
+    <label id="dueDateLabel">Due Date:
+      <input type="date" id="modalDueDate" />
+    </label>
+    <label id="startDateLabel">Projected Start Date:
+      <input type="date" id="modalStartDate" />
+    </label>
+    <div class="modal-actions">
+      <button id="modalCancel">Cancel</button>
+      <button id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

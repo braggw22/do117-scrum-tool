@@ -9,3 +9,293 @@
   <p>This site will host the DO117 Scrum dashboard. Stay tuned!</p>
 </body>
 </html>
+      background-color: #9e9e9e;
+    }
+    .task-card .actions button.edit {
+      background-color: #ffa000;
+    }
+    .task-card .actions button.complete {
+      background-color: #388e3c;
+    }
+    .task-card .actions button.assign {
+      background-color: #1976d2;
+    }
+    .hidden {
+      display: none;
+    }
+    /* Scrollbars */
+    .column {
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DO117 Scrum Tool</h1>  </header>
+  <div class="container">
+    <aside>
+      <h2>Status Overview</h2>
+      <canvas id="statusChart" width="300" height="300"></canvas>
+    </aside>
+    <main>
+      <div id="filters">
+        <input type="text" id="search" placeholder="Search tasks..." />
+        <select id="filterBuilding">
+          <option value="">All Buildings</option>
+        </select>
+        <select id="filterWing">
+          <option value="">All Wings</option>
+        </select>
+        <select id="filterType">
+          <option value="">All Types</option>
+        </select>
+        <select id="filterAssignee">
+          <option value="">All Assignees</option>
+        </select>
+        <select id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="Not Started">Not Started</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Complete">Complete</option>
+        </select>
+      </div>
+      <div id="boardContainer">
+        <div class="column" data-status="Not Started">
+          <h2>Not Started</h2>
+          <div class="tasks"></div>
+        </div>
+        <div class="column" data-status="In Progress">
+      <h2>In Progress</h2>
+
+          <div class="tasks"></div>
+
+        </div>
+        <div class="column" data-status="Complete">
+          <h2>Complete</h2>
+          <div class="tasks"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Chart.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+  <script>
+    // Example tasks data
+    let tasks = [
+      {
+        id: 1,
+        title: 'Install cabling',
+        description: 'Run network cabling through Building 1, Wing A, Room 101',
+        dueDate: '2025-08-20',
+        status: 'Not Started',
+        tags: { building: '1', wing: 'A', room: '101', type: 'Wiring' },
+        assignee: ''
+      },
+      {
+        id: 2,
+        title: 'Configure router',
+        description: 'Set up router in Building 2, Wing B',
+        dueDate: '2025-08-22',
+        status: 'In Progress',
+        tags: { building: '2', wing: 'B', room: '202', type: 'Networking' },
+        assignee: 'Alice'
+      },
+      {
+        id: 3,
+        title: 'Test connectivity',
+        description: 'Verify connectivity in Building 1, Wing A',
+        dueDate: '2025-08-25',
+        status: 'Complete',
+        tags: { building: '1', wing: 'A', room: '101', type: 'Testing' },
+        assignee: 'Bob'
+      }
+    ];
+
+    // Populate filter dropdowns
+    function populateFilters() {
+      const buildingSet = new Set();
+      const wingSet = new Set();
+      const typeSet = new Set();
+      const assigneeSet = new Set();
+      tasks.forEach(t => {
+        if (t.tags.building) buildingSet.add(t.tags.building);
+        if (t.tags.wing) wingSet.add(t.tags.wing);
+        if (t.tags.type) typeSet.add(t.tags.type);
+        if (t.assignee) assigneeSet.add(t.assignee);
+      });
+      const populate = (select, set) => {
+        select.innerHTML = '<option value="">All</option>';
+        Array.from(set).sort().forEach(val => {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          select.appendChild(opt);
+        });
+      };
+      populate(document.getElementById('filterBuilding'), buildingSet);
+      populate(document.getElementById('filterWing'), wingSet);
+      populate(document.getElementById('filterType'), typeSet);
+      populate(document.getElementById('filterAssignee'), assigneeSet);
+    }
+
+    // Render tasks into boards
+    function renderBoard() {
+      // Clear columns
+      document.querySelectorAll('.column .tasks').forEach(col => col.innerHTML = '');
+      // Get filter values
+      const search = document.getElementById('search').value.toLowerCase();
+      const fb = document.getElementById('filterBuilding').value;
+      const fw = document.getElementById('filterWing').value;
+      const ft = document.getElementById('filterType').value;
+      const fa = document.getElementById('filterAssignee').value;
+      const fs = document.getElementById('filterStatus').value;
+      // Filter tasks
+      const filtered = tasks.filter(t => {
+        return (
+          (!fb || t.tags.building === fb) &&
+          (!fw || t.tags.wing === fw) &&
+          (!ft || t.tags.type === ft) &&
+          (!fa || t.assignee === fa) &&
+          (!fs || t.status === fs) &&
+          (t.title.toLowerCase().includes(search) || t.description.toLowerCase().includes(search))
+        );
+      });
+      // Render each task
+      filtered.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.dataset.id = t.id;
+        card.innerHTML = `
+          <div class="title">${t.title}</div>
+          <div class="description">${t.description}</div>
+          <div class="meta">Due: ${t.dueDate} | Assignee: ${t.assignee || 'Unassigned'}</div>
+          <div class="meta">Building: ${t.tags.building}, Wing: ${t.tags.wing}, Type: ${t.tags.type}</div>
+          <div class="actions">
+            <button class="assign">Assign</button>
+            <button class="unassign">Unassign</button>
+            <button class="edit">Edit</button>
+            ${t.status !== 'Complete' ? '<button class="complete">Complete</button>' : ''}
+          </div>
+        `;
+        // Add event listeners for actions
+        const assignBtn = card.querySelector('.assign');
+        assignBtn.addEventListener('click', () => assignTask(t.id));
+        const unassignBtn = card.querySelector('.unassign');
+        unassignBtn.addEventListener('click', () => unassignTask(t.id));
+        const editBtn = card.querySelector('.edit');
+        editBtn.addEventListener('click', () => editTask(t.id));
+        const completeBtn = card.querySelector('.complete');
+        if (completeBtn) completeBtn.addEventListener('click', () => completeTask(t.id));
+        // Append to appropriate column
+        const col = document.querySelector(`.column[data-status="${t.status}"] .tasks`);
+        if (col) col.appendChild(card);
+      });
+      updateChart();
+    }
+
+    function assignTask(id) {
+      const name = prompt('Enter assignee name:');
+      if (name !== null) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+          task.assignee = name.trim();
+          // Add to assignee filter if new
+          populateFilters();
+          renderBoard();
+        }
+      }
+    }
+    function unassignTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.assignee = '';
+        populateFilters();
+        renderBoard();
+      }
+    }
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      const title = prompt('Edit title:', task.title);
+      if (title === null) return;
+      const description = prompt('Edit description:', task.description);
+      if (description === null) return;
+      const dueDate = prompt('Edit due date (YYYY-MM-DD):', task.dueDate);
+      if (dueDate === null) return;
+      const building = prompt('Edit building:', task.tags.building);
+      if (building === null) return;
+      const wing = prompt('Edit wing:', task.tags.wing);
+      if (wing === null) return;
+      const type = prompt('Edit type:', task.tags.type);
+      if (type === null) return;
+      // Update task
+      task.title = title.trim();
+      task.description = description.trim();
+      task.dueDate = dueDate.trim();
+      task.tags.building = building.trim();
+      task.tags.wing = wing.trim();
+      task.tags.type = type.trim();
+      populateFilters();
+      renderBoard();
+    }
+    function completeTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.status = 'Complete';
+        renderBoard();
+      }
+    }
+
+    // Chart setup
+    let chart;
+    function updateChart() {
+      const counts = { 'Not Started': 0, 'In Progress': 0, 'Complete': 0 };
+      tasks.forEach(t => {
+        if (counts[t.status] !== undefined) counts[t.status]++;
+      });
+      const data = {
+        labels: ['Not Started', 'In Progress', 'Complete'],
+        datasets: [{
+          label: 'Tasks',
+          data: [counts['Not Started'], counts['In Progress'], counts['Complete']],
+        }]
+      };
+      if (chart) {
+        chart.data = data;
+        chart.update();
+      } else {
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: data,
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: { display: false }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Status' } },
+              y: { title: { display: true, text: 'Count' }, beginAtZero: true, precision: 0 }
+            }
+          }
+        });
+      }
+    }
+
+    // Event listeners for filters
+    document.getElementById('search').addEventListener('input', renderBoard);
+    ['filterBuilding','filterWing','filterType','filterAssignee','filterStatus'].forEach(id => {
+      document.getElementById(id).addEventListener('change', renderBoard);
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      populateFilters();
+      renderBoard();
+    });
+  </script>
+</body>
+</html>

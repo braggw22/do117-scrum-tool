@@ -377,7 +377,7 @@
     }
   </style>
 </head>
-<body>
+<body data-supabase-url="https://oodizihyiqyhjfexvzvo.supabase.co" data-supabase-anon="YOUR-ANON-KEY">
   <header>
     <!-- Header with navigation and actions -->
     <div class="header-row">
@@ -404,6 +404,17 @@
       </div>
     </div>
   </header>
+<section id="daily-update-section" class="panel">
+  <h2>Daily Tag-Up</h2>
+  <form id="daily-update-form">
+    <input id="update-username" type="text" placeholder="Your name" required />
+    <input id="update-site" type="text" placeholder="Site (optional)" />
+    <textarea id="update-text" placeholder="What have you accomplished? Blockers?" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+  <ul id="daily-updates-list"></ul>
+</section>
+
   <div class="container">
     <aside>
       <h2>Assignment Overview</h2>
@@ -1325,5 +1336,8 @@
     </div>
   </div>
 </div>
+
+<script type="module" src="supabaseClient.js"></script>
+<script type="module" src="dashboard.js"></script>
 </body>
 </html>
